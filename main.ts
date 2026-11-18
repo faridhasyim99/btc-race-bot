@@ -78,6 +78,22 @@ class Bot {
       // No CBBTC bar this minute: no new close, nothing to decide.
       return [];
     }
+    // Malformed-bar guard: a bar without a usable close must never poison
+    // the momentum history. Skip the batch entirely — no close recorded,
+    // no counters advanced — rather than pushing a zero or crashing on a
+    // bad value. On clean replay data this never triggers.
+    {
+      const raw = bar.c;
+      let usable = raw !== undefined && raw !== null && raw !== '';
+      if (usable) {
+        try {
+          usable = BigInt(raw as string | number | bigint) > 0n;
+        } catch {
+          usable = false;
+        }
+      }
+      if (!usable) return [];
+    }
     const close = BigInt(bar.c);
     this.closes.push(close);
 
